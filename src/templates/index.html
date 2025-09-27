@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Churn Prediction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            text-align: center;
+            padding: 50px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 8px;
+            width: 200px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            display: none;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #churnStatus {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Customer Churn Prediction</h1>
+
+    <!-- Input form -->
+    <form id="predictForm">
+        <input type="text" id="customer_id" placeholder="Enter Customer Number" required>
+        <button type="submit">Predict</button>
+    </form>
+
+    <!-- Result display -->
+    <div id="result">
+        <p id="customerInfo"></p>
+        <p id="churnProb"></p>
+        <p id="churnStatus"></p>
+    </div>
+
+    <script>
+        // Handle form submission
+        const form = document.getElementById("predictForm");
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            // Get user input
+            const customerNumber = document.getElementById("customer_id").value;
+
+            // Send request to Flask API
+            const response = await fetch("/predict_by_id", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ customer_id: customerNumber })
+            });
+
+            const data = await response.json();
+            const resultDiv = document.getElementById("result");
+
+            // Show the result section
+            resultDiv.style.display = "block";
+
+            // Handle errors
+            if (data.error) {
+                document.getElementById("customerInfo").textContent = "";
+                document.getElementById("churnProb").textContent = "";
+                const statusElem = document.getElementById("churnStatus");
+                statusElem.textContent = "Error: " + data.error;
+                statusElem.style.color = "red";
+            } else {
+                // Show customer info and probability
+                document.getElementById("customerInfo").textContent = "Customer Number: " + data.customer_id;
+                document.getElementById("churnProb").textContent = "Churn Probability: " + (data.churn_probability * 100).toFixed(2) + "%";
+
+                // Determine status
+                const churnStatus = document.getElementById("churnStatus");
+                if (data.churn_probability < 0.4) {
+                    churnStatus.textContent = "Status: Safe ✅";
+                    churnStatus.style.color = "green";
+                } else if (data.churn_probability < 0.7) {
+                    churnStatus.textContent = "Status: Medium Risk ⚠️";
+                    churnStatus.style.color = "orange";
+                } else {
+                    churnStatus.textContent = "Status: High Risk 🚨";
+                    churnStatus.style.color = "red";
+                }
+            }
+        });
+    </script>
+</body>
+</html>
