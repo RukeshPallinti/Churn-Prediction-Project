@@ -17,11 +17,15 @@ from dotenv import load_dotenv
 load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 
+# Atlas connection string(will be for hosting online)
+MONGO_URI = "mongodb+srv://rukesh2507_db_user:Rukesh_123@cluster0.7522su2.mongodb.net/churndb?retryWrites=true&w=majority"
+
 # 1. Read data
 client = MongoClient(MONGO_URI)
 db = client['churndb']
 df = pd.DataFrame(list(db.customers.find()))
 df = df.drop(columns=['_id'], errors='ignore')
+
 
 # 2. Basic cleaning
 df['Churn'] = df['Churn'].map({'No':0, 'Yes':1})
