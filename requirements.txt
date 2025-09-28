@@ -1,4 +1,4 @@
-python-3.10+
+
 joblib~=1.4.2
 pandas~=2.3.1
 Flask~=3.1.2
