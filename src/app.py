@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4fcdd0f73eef92ad667d1bdee4695de4ee1184a2
 import os
 from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient

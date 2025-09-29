@@ -6,3 +6,8 @@ python-dotenv
 matplotlib
 seaborn
 scikit-learn
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> 4fcdd0f73eef92ad667d1bdee4695de4ee1184a2
