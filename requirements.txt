@@ -6,5 +6,3 @@ joblib
 gunicorn
 pymongo
 python-dotenv
-
-
