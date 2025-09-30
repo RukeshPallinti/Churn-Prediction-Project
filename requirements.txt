@@ -1,10 +1,10 @@
 Flask
-pandas==2.1.1
-numpy==1.27.4
-scikit-learn==1.3.1
-joblib==1.3.2
-gunicorn==21.2.0
-pymongo==5.3.1
-python-dotenv==1.0.1
+pandas
+numpy
+scikit-learn
+joblib
+gunicorn
+pymongo
+python-dotenv
 
 
