@@ -19,39 +19,30 @@ app = Flask(__name__, template_folder="templates")
 
 # Connect to MongoDB Atlas
 client = MongoClient(MONGO_URI)
-db = client["churndb"]   # this matches your URI's db name
-customers_collection = db["customers"]  # adjust if your collection has a different name
+db = client["churndb"]
+customers_collection = db["customers"]
 
 # Load the trained churn prediction model
 churn_model = joblib.load(MODEL_PATH)
 
 @app.route("/")
 def home():
-    """Render the homepage."""
     return render_template("index.html")
 
 @app.route("/predict_by_id", methods=["POST"])
 def predict_by_id():
-    """
-    Predict churn for a customer by their ID.
-    Expects JSON: {"customer_id": "some_id"}
-    """
     data = request.get_json()
     customer_id = data.get("customer_id")
-
     if not customer_id:
         return jsonify({"error": "Please provide a customer_id"}), 400
 
-    # Fetch customer from MongoDB Atlas
     customer_doc = customers_collection.find_one({"customer_number": str(customer_id)})
     if not customer_doc:
         return jsonify({"error": f"No customer found with ID {customer_id}"}), 404
 
-    # Convert Mongo document to DataFrame
-    customer_doc.pop("_id", None)  # Remove MongoDB's internal ID
+    customer_doc.pop("_id", None)
     customer_df = pd.DataFrame([customer_doc])
 
-    # Predict churn probability
     probability = churn_model.predict_proba(customer_df)[:, 1][0]
     prediction = int(probability > 0.5)
 
@@ -62,4 +53,5 @@ def predict_by_id():
     })
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
