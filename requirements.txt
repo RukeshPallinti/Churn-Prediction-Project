@@ -1,4 +1,4 @@
-Flask==2.3.5
+Flask
 pandas==2.1.1
 numpy==1.27.4
 scikit-learn==1.3.1
