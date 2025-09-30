@@ -75,4 +75,4 @@ def predict_by_id():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     # Using debug=True as in your original file
-    app.run(host="0.0.0.0", port=port
+    app.run(host="0.0.0.0", port=port,debug=True)
