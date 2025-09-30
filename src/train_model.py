@@ -1,104 +1,80 @@
-#model training
 import os
+from flask import Flask, request, jsonify, render_template
+from pymongo import MongoClient
 import joblib
 import pandas as pd
-from pymongo import MongoClient
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
-
-# load env
 from dotenv import load_dotenv
+
+# Load environment variables
 load_dotenv()
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_URI = os.getenv(
+    "MONGO_URI",
+    "mongodb+srv://rukesh2507_db_user:Rukesh_123@cluster0.7522su2.mongodb.net/churndb?retryWrites=true&w=majority"
+)
+MODEL_PATH = os.getenv("MODEL_PATH", "models/churn_pipeline.joblib")
 
-# Atlas connection string(will be for hosting online)
-MONGO_URI = "mongodb+srv://rukesh2507_db_user:Rukesh_123@cluster0.7522su2.mongodb.net/churndb?retryWrites=true&w=majority"
+# Initialize Flask app
+app = Flask(__name__, template_folder="templates")
 
-# 1. Read data
+# Connect to MongoDB Atlas
 client = MongoClient(MONGO_URI)
 db = client['churndb']
-df = pd.DataFrame(list(db.customers.find()))
-df = df.drop(columns=['_id'], errors='ignore')
+customers_collection = db['customers']
+
+# Load trained churn prediction model
+churn_model = joblib.load(MODEL_PATH)
+
+# Features used in training
+NUMERIC_FEATURES = ['tenure', 'MonthlyCharges', 'TotalCharges']
+CATEGORICAL_FEATURES = [
+    'gender', 'SeniorCitizen', 'Partner', 'Dependents',
+    'PhoneService', 'MultipleLines', 'InternetService',
+    'OnlineSecurity', 'OnlineBackup', 'DeviceProtection',
+    'TechSupport', 'StreamingTV', 'StreamingMovies',
+    'Contract', 'PaperlessBilling', 'PaymentMethod'
+]
+ALL_FEATURES = NUMERIC_FEATURES + CATEGORICAL_FEATURES
 
 
-# 2. Basic cleaning
-df['Churn'] = df['Churn'].map({'No':0, 'Yes':1})
-df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
+@app.route("/")
+def home():
+    return render_template("index.html")  # your existing HTML
 
-# 3. Features & target
-target = 'Churn'
-drop_cols = ['customerID']  # or any identifier
-X = df.drop(columns=[target] + drop_cols, errors='ignore')
-y = df[target].astype(int)
 
-# 4. Define column lists
-numeric_features = X.select_dtypes(include=['int64','float64']).columns.tolist()
-# sometimes numeric may be strings
-numeric_features = [c for c in numeric_features if c not in ['SeniorCitizen']]  # check
-categorical_features = X.select_dtypes(include=['object','bool']).columns.tolist()
+@app.route("/predict_by_id", methods=["POST"])
+def predict_by_id():
+    # Get customer_id from form
+    customer_id = request.form.get("customer_id", "").strip()
 
-# 5. Preprocessing
-numeric_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='median')),
-    ('scaler', StandardScaler())
-])
-categorical_transformer = Pipeline(steps=[
-    ('imputer', SimpleImputer(strategy='most_frequent')),
-    ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
-])
+    if not customer_id:
+        return jsonify({"error": "Please provide a customer_id"}), 400
 
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', numeric_transformer, numeric_features),
-        ('cat', categorical_transformer, categorical_features)
-    ])
+    # Fetch customer from Atlas
+    customer_doc = customers_collection.find_one({"customerID": customer_id})
+    if not customer_doc:
+        return jsonify({"error": f"No customer found with ID {customer_id}"}), 404
 
-# 6. Model pipelines to compare
-pipelines = {
-    'logreg': Pipeline([('preproc', preprocessor), ('clf', LogisticRegression(max_iter=1000))]),
-    'rf': Pipeline([('preproc', preprocessor), ('clf', RandomForestClassifier(random_state=42))]),
-    'gb': Pipeline([('preproc', preprocessor), ('clf', GradientBoostingClassifier(random_state=42))])
-}
+    # Remove MongoDB _id field
+    customer_doc.pop("_id", None)
 
-# train/test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.2, random_state=42)
+    # Convert to DataFrame and align columns
+    customer_df = pd.DataFrame([customer_doc])
+    for col in ALL_FEATURES:
+        if col not in customer_df.columns:
+            customer_df[col] = 0 if col in NUMERIC_FEATURES else ""
+    customer_df = customer_df[ALL_FEATURES]
 
-# quick baseline training & evaluation
-results = {}
-for name, pipe in pipelines.items():
-    pipe.fit(X_train, y_train)
-    preds = pipe.predict(X_test)
-    probs = pipe.predict_proba(X_test)[:, 1]
-    print(f"--- MODEL: {name} ---")
-    print(classification_report(y_test, preds))
-    print("ROC AUC:", roc_auc_score(y_test, probs))
-    results[name] = {'pipeline': pipe, 'roc': roc_auc_score(y_test, probs)}
+    # Predict churn
+    probability = churn_model.predict_proba(customer_df)[:, 1][0]
+    prediction = int(probability > 0.5)
 
-# Choose best (by ROC AUC)
-best_name = max(results, key=lambda k: results[k]['roc'])
-best_pipeline = results[best_name]['pipeline']
-print("Best model:", best_name)
+    return render_template(
+        "index.html",
+        customer_id=customer_id,
+        churn_probability=round(probability, 4),
+        churn_prediction=prediction
+    )
 
-# Save pipeline
-os.makedirs("models", exist_ok=True)
-joblib.dump(best_pipeline, "models/churn_pipeline.joblib")
-print("Saved model to models/churn_pipeline.joblib")
 
-# Model Selection & High Parameter Tuning
-from sklearn.model_selection import GridSearchCV
-
-param_grid = {
-  'clf__n_estimators': [100, 200],
-  'clf__max_depth': [6, 10]
-}
-grid = GridSearchCV(pipelines['rf'], param_grid, cv=3, scoring='roc_auc', n_jobs=-1)
-grid.fit(X_train, y_train)
-print(grid.best_params_, grid.best_score_)
-best = grid.best_estimator_
-joblib.dump(best, "models/churn_pipeline.joblib")
+if __name__ == "__main__":
+    app.run(debug=True, port=5000)

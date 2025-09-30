@@ -1,13 +1,10 @@
-joblib
-pandas
-Flask
-pymongo
-python-dotenv
-matplotlib
-seaborn
-scikit-learn
-<<<<<<< HEAD
-=======
+Flask==2.3.6
+pandas==2.1.1
+numpy==1.27.4
+scikit-learn == 1.3.1
+joblib==1.3.2
+gunicorn==21.2.0
+pymongo==5.3.1
+python-dotenv==1.0.1
 
 
->>>>>>> 4fcdd0f73eef92ad667d1bdee4695de4ee1184a2

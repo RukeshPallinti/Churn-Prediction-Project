@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> 4fcdd0f73eef92ad667d1bdee4695de4ee1184a2
 import os
 from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient
@@ -11,16 +7,20 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+
+# MongoDB Atlas connection string from .env
+MONGO_URI = os.getenv("MONGO_URI")
+
+# Path to your trained model
 MODEL_PATH = os.getenv("MODEL_PATH", "models/churn_pipeline.joblib")
 
 # Initialize Flask app
 app = Flask(__name__, template_folder="templates")
 
-# Connect to MongoDB
+# Connect to MongoDB Atlas
 client = MongoClient(MONGO_URI)
-db = client['churndb']
-customers_collection = db['customers']
+db = client["churndb"]   # this matches your URI's db name
+customers_collection = db["customers"]  # adjust if your collection has a different name
 
 # Load the trained churn prediction model
 churn_model = joblib.load(MODEL_PATH)
@@ -42,7 +42,7 @@ def predict_by_id():
     if not customer_id:
         return jsonify({"error": "Please provide a customer_id"}), 400
 
-    # Fetch customer from MongoDB
+    # Fetch customer from MongoDB Atlas
     customer_doc = customers_collection.find_one({"customer_number": str(customer_id)})
     if not customer_doc:
         return jsonify({"error": f"No customer found with ID {customer_id}"}), 404

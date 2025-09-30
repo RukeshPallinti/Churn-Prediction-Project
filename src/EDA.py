@@ -40,10 +40,6 @@ plt.title("Tenure vs Churn")
 plt.savefig("src/eda_plots/tenure_vs_churn.png")
 plt.close()
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 4fcdd0f73eef92ad667d1bdee4695de4ee1184a2
 # Load data into pandas
 df = pd.DataFrame(list(customers.find()))
 df = df.drop(columns=["_id"])  # remove MongoDB’s _id column
