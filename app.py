@@ -12,7 +12,7 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 
 # Path to your trained model
-MODEL_PATH = os.getenv("MODEL_PATH", "models/churn_pipeline.joblib")
+MODEL_PATH = os.getenv("MODEL_PATH", "src/models/churn_pipeline.joblib")
 
 # Initialize Flask app
 app = Flask(__name__, template_folder="templates")
