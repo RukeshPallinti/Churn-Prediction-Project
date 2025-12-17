@@ -41,10 +41,6 @@ def predict_by_id():
     # Ensure the input is treated as a clean string by stripping whitespace
     customer_id_clean = str(customer_id).strip()
 
-    # --- FIX: Use MongoDB $regex for flexible, partial matching anchored at the start ---
-    # '^': Ensures the customerID field starts with the user's input.
-    # 'i': Makes the search case-insensitive.
-    # This allows inputs like "7590" to match "7590-VHVEG".
     lookup_query = {
         "customerID": {
             "$regex": "^" + customer_id_clean,
@@ -53,7 +49,6 @@ def predict_by_id():
     }
 
     customer_doc = customers_collection.find_one(lookup_query)
-    # --- END FIX ---
 
     if not customer_doc:
         return jsonify({"error": f"No customer found matching the input '{customer_id_clean}'"}), 404
@@ -65,7 +60,7 @@ def predict_by_id():
     prediction = int(probability > 0.5)
 
     return jsonify({
-        "customer_id_matched": customer_doc.get("customerID"),  # Return the full ID that was matched
+        "customer_id_matched": customer_doc.get("customerID"),  # To return the full ID 
         "input_used": customer_id_clean,
         "churn_probability": float(probability),
         "churn_prediction": prediction
